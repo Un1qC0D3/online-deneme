@@ -53,18 +53,32 @@ function startOturum(name) {
   activeOturum = name;
   globalIndex = name === "sozel" ? 1 : 51;
 
+  // Ekranları kapat, loading'i aç
   document.getElementById("start-screen").style.display = "none";
-  document.getElementById("oturum-container").style.display = "block";
-  document.getElementById("oturum-title").textContent = oturumlar[name].title;
-  // Sadece aktif oturumun kutusunu göster
-  document.getElementById("answers-sozel").style.display =
-    name === "sozel" ? "block" : "none";
-  document.getElementById("answers-sayisal").style.display =
-    name === "sayisal" ? "block" : "none";
+  document.getElementById("oturum-container").style.display = "none";
+  document.getElementById("loading-screen").style.display = "flex";
+
+  // Cevap kutularını sıfırla
+  const containerId = name === "sozel" ? "answers-sozel" : "answers-sayisal";
+  document.getElementById(containerId).innerHTML = "";
 
   drawAnswers(oturumlar[name].questions);
-  loadPDF(oturumlar[name].pdf);
-  startTimer(oturumlar[name].sure);
+
+  // PDF yüklenince göster
+  loadPDF(oturumlar[name].pdf, () => {
+    // PDF yüklendikten sonra bu kısım çalışır
+    document.getElementById("loading-screen").style.display = "none";
+    document.getElementById("oturum-container").style.display = "block";
+    document.getElementById("oturum-title").textContent = oturumlar[name].title;
+
+    // Sadece ilgili kutu görünsün
+    document.getElementById("answers-sozel").style.display =
+      name === "sozel" ? "block" : "none";
+    document.getElementById("answers-sayisal").style.display =
+      name === "sayisal" ? "block" : "none";
+
+    startTimer(oturumlar[name].sure);
+  });
 }
 
 function drawAnswers(groups) {
@@ -213,21 +227,29 @@ function downloadTextFile(filename, content) {
   link.click();
 }
 
-function loadPDF(url) {
+function loadPDF(url, afterLoadCallback) {
   canvas = document.getElementById("pdf-canvas");
   ctx = canvas.getContext("2d");
   pdfjsLib.GlobalWorkerOptions.workerSrc = "pdfjs/pdf.worker.js";
+
   pdfjsLib.getDocument(url).promise.then(function (doc) {
     pdfDoc = doc;
     document.getElementById("page-count").textContent = pdfDoc.numPages;
-    renderPage(1);
+
+    // küçük bir gecikmeyle renderPage çağır
+    setTimeout(() => {
+      renderPage(1, () => {
+        if (typeof afterLoadCallback === "function") afterLoadCallback();
+      });
+    }, 100); // 100ms bekle ki DOM otursun
   });
 }
 
-function renderPage(num) {
+function renderPage(num, callback) {
   pageNum = num;
   pdfDoc.getPage(num).then(function (page) {
-    const containerWidth = document.getElementById("pdf-wrapper").clientWidth;
+    const containerWidth =
+      document.getElementById("pdf-wrapper").offsetWidth || 600;
     const unscaled = page.getViewport({ scale: 1 });
     const scale = containerWidth / unscaled.width;
     const viewport = page.getViewport({ scale });
@@ -236,8 +258,12 @@ function renderPage(num) {
     canvas.height = viewport.height;
 
     const renderContext = { canvasContext: ctx, viewport: viewport };
-    page.render(renderContext);
-    document.getElementById("page-num").textContent = num;
+
+    const renderTask = page.render(renderContext);
+    renderTask.promise.then(() => {
+      document.getElementById("page-num").textContent = num;
+      if (typeof callback === "function") callback();
+    });
   });
 }
 
