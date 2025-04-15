@@ -1,0 +1,78 @@
+body {
+  font-family: 'Segoe UI', sans-serif;
+  font-size: 14px;
+}
+
+/* ŞIKLARIN DİZİLİMİ */
+.answer-row {
+  display: grid;
+  grid-template-columns: 40px repeat(4, 1fr); /* numara + 4 şık */
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+/* Soru numarası */
+.answer-row strong {
+  text-align: center;
+  font-weight: 600;
+}
+
+/* ŞIK KUTULARI */
+.answer-option {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  height: 44px;
+  font-weight: bold;
+  font-size: 1.1rem;
+  cursor: pointer;
+  user-select: none;
+  background-color: white;
+  transition: all 0.2s ease-in-out;
+  padding: 4px;
+}
+
+.answer-option:hover {
+  background-color: #f1f1f1;
+}
+
+.answer-option input[type="radio"] {
+  display: none;
+}
+
+.answer-option.selected {
+  background-color: #0d6efd;
+  color: white;
+  border-color: #0d6efd;
+}
+
+/* ============================================= */
+/* 📱 MOBİL GÖRÜNÜM İÇİN RESPONSIVE TASARIM */
+@media (max-width: 576px) {
+  .answer-row {
+    grid-template-columns: 1fr 1fr 1fr; /* mobilde 3 sütun */
+  }
+
+  .answer-row strong {
+    grid-column: span 3;
+    font-size: 1rem;
+    text-align: left;
+  }
+
+  .answer-option {
+    height: 42px;
+    font-size: 1rem;
+  }
+
+  #pdf-wrapper {
+    height: 60vh !important;
+  }
+
+  .card-footer button {
+    font-size: 1rem;
+  }
+}
+/* ============================================= */
