@@ -176,8 +176,9 @@ function printAnswers() {
   let output = "";
   let index = 1;
   const groups = [...oturumlar.sozel.questions, ...oturumlar.sayisal.questions];
+
   groups.forEach((group) => {
-    output += `\n${group.title}\n`;
+    output += `${group.title}\n`; // sadece başlık
     let line = "";
     for (let i = 0; i < group.count; i++) {
       const selected = document.querySelector(
@@ -186,11 +187,12 @@ function printAnswers() {
       line += selected ? selected.value : " ";
       index++;
     }
-    output += line + "\n";
+    output += line + "\n"; // sadece cevap satırı
   });
 
   const name = getCookie("studentName") || "ogrenci";
   const fileName = `${name.replaceAll(" ", "_")}-cevaplar.txt`;
+
   downloadTextFile(fileName, output);
 
   document.getElementById("start-screen").innerHTML += `
