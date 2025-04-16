@@ -224,6 +224,7 @@ function loadPDF(url, callback) {
   iframe.style.height = "100%";
   iframe.style.border = "none";
   iframe.style.overflow = "auto";
+  iframe.style.border = "none";
 
   iframe.onload = () => {
     if (typeof callback === "function") callback();
