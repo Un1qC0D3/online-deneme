@@ -68,41 +68,8 @@ body {
   }
 
   #pdf-wrapper {
-    height: 90vh;
-    width: 100%;
-    overflow: hidden; /* 👈 sadece burası */
-    -webkit-overflow-scrolling: touch; /* iOS için kaydırma */
+    height: 60vh !important;
   }
-  #pdf-wrapper iframe {
-    width: 100%;
-    height: 100%;
-    border: none;
-    overflow: auto;
-    display: block;
-  }
-
-  /* Dış wrapper scroll'u tamamen gizle */
-  .pdf-wrapper {
-    width: 100%;
-    height: 90vh;
-    overflow: hidden;
-    -webkit-overflow-scrolling: touch; /* iOS için kaydırma */
-  }
-  
-
-/* iframe scroll için aktif, dışarı taşmasın */
-.pdf-wrapper iframe {
-  width: 100%;
-  height: 100%;
-  max-width: 100%;
-  border: none;
-  overflow: auto;
-  display: block;
-  box-sizing: border-box;
-}
-
-
-  
 
   .card-footer button {
     font-size: 1rem;

@@ -23,7 +23,10 @@ const oturumlar = {
 
 let activeOturum = null;
 let globalIndex = 1;
-let timerInterval = null;
+let pdfDoc = null,
+  pageNum = 1,
+  canvas = null,
+  ctx = null;
 
 function setCookie(name, value, days = 1) {
   const d = new Date();
@@ -50,23 +53,25 @@ function startOturum(name) {
   activeOturum = name;
   globalIndex = name === "sozel" ? 1 : 51;
 
-  // ekranları kapat
+  // Ekranları kapat, loading'i aç
   document.getElementById("start-screen").style.display = "none";
   document.getElementById("oturum-container").style.display = "none";
   document.getElementById("loading-screen").style.display = "flex";
 
-  // cevap kutularını temizle
+  // Cevap kutularını sıfırla
   const containerId = name === "sozel" ? "answers-sozel" : "answers-sayisal";
   document.getElementById(containerId).innerHTML = "";
 
   drawAnswers(oturumlar[name].questions);
 
-  // PDF iframe olarak yüklenir
+  // PDF yüklenince göster
   loadPDF(oturumlar[name].pdf, () => {
+    // PDF yüklendikten sonra bu kısım çalışır
     document.getElementById("loading-screen").style.display = "none";
     document.getElementById("oturum-container").style.display = "block";
     document.getElementById("oturum-title").textContent = oturumlar[name].title;
 
+    // Sadece ilgili kutu görünsün
     document.getElementById("answers-sozel").style.display =
       name === "sozel" ? "block" : "none";
     document.getElementById("answers-sayisal").style.display =
@@ -109,22 +114,25 @@ function drawAnswers(groups) {
         input.id = id;
         input.value = letter;
 
-        // Tıklanınca şık seçimi / iptali
+        // Şık tıklandığında eğer zaten seçiliyse iptal et
         div.addEventListener("click", (e) => {
           const wasChecked = input.checked;
-          const all = wrapper.querySelectorAll(".answer-option");
-          all.forEach((opt) => {
+
+          // Tüm şıkları temizle
+          const allOptions = wrapper.querySelectorAll(".answer-option");
+          allOptions.forEach((opt) => {
             opt.classList.remove("selected");
             const inp = opt.querySelector("input");
             if (inp) inp.checked = false;
           });
 
+          // Eğer zaten seçili değilse bu şıkkı seç
           if (!wasChecked) {
             input.checked = true;
             div.classList.add("selected");
           }
 
-          e.preventDefault();
+          e.preventDefault(); // label tıklaması ile çakışmayı engelle
         });
 
         div.appendChild(input);
@@ -138,10 +146,13 @@ function drawAnswers(groups) {
   });
 }
 
+let timerInterval = null; // sayaç referansı globalde
+
 function startTimer(duration) {
   let timer = duration;
   const display = document.getElementById("timer");
 
+  // Önceki sayaç varsa durdur
   if (timerInterval) clearInterval(timerInterval);
 
   timerInterval = setInterval(() => {
@@ -156,7 +167,7 @@ function startTimer(duration) {
 }
 
 function endOturum() {
-  if (timerInterval) clearInterval(timerInterval);
+  if (timerInterval) clearInterval(timerInterval); // sayaç durdur
 
   alert(activeOturum.toUpperCase() + " oturumu sona erdi.");
 
@@ -191,10 +202,12 @@ function printAnswers() {
     output += line + "\n";
   });
 
+  // Dosya olarak indir
   const name = getCookie("studentName") || "ogrenci";
   const fileName = `${name.replaceAll(" ", "_")}-cevaplar.txt`;
   downloadTextFile(fileName, output);
 
+  // İndirme butonunu göster
   const safeName = name.replaceAll(" ", "_");
   document.getElementById("start-screen").innerHTML += `
     <button class="btn btn-outline-success mt-3" onclick="downloadTextFile('${safeName}-cevaplar.txt', \`${output.replace(
@@ -214,23 +227,51 @@ function downloadTextFile(filename, content) {
   link.click();
 }
 
-function loadPDF(url, callback) {
-  const wrapper = document.getElementById("pdf-wrapper");
-  wrapper.innerHTML = "";
+function loadPDF(url, afterLoadCallback) {
+  canvas = document.getElementById("pdf-canvas");
+  ctx = canvas.getContext("2d");
+  pdfjsLib.GlobalWorkerOptions.workerSrc = "pdfjs/pdf.worker.js";
 
-  const iframe = document.createElement("iframe");
-  iframe.src = url;
-  iframe.style.width = "100%";
-  iframe.style.height = "100%";
-  iframe.style.border = "none";
-  iframe.style.overflow = "auto";
-  iframe.style.border = "none";
+  pdfjsLib.getDocument(url).promise.then(function (doc) {
+    pdfDoc = doc;
+    document.getElementById("page-count").textContent = pdfDoc.numPages;
 
-  iframe.onload = () => {
-    if (typeof callback === "function") callback();
-  };
+    // küçük bir gecikmeyle renderPage çağır
+    setTimeout(() => {
+      renderPage(1, () => {
+        if (typeof afterLoadCallback === "function") afterLoadCallback();
+      });
+    }, 100); // 100ms bekle ki DOM otursun
+  });
+}
 
-  wrapper.appendChild(iframe);
+function renderPage(num, callback) {
+  pageNum = num;
+  pdfDoc.getPage(num).then(function (page) {
+    const containerWidth =
+      document.getElementById("pdf-wrapper").offsetWidth || 600;
+    const unscaled = page.getViewport({ scale: 1 });
+    const scale = containerWidth / unscaled.width;
+    const viewport = page.getViewport({ scale });
+
+    canvas.width = viewport.width;
+    canvas.height = viewport.height;
+
+    const renderContext = { canvasContext: ctx, viewport: viewport };
+
+    const renderTask = page.render(renderContext);
+    renderTask.promise.then(() => {
+      document.getElementById("page-num").textContent = num;
+      if (typeof callback === "function") callback();
+    });
+  });
+}
+
+function nextPage() {
+  if (pageNum < pdfDoc.numPages) renderPage(pageNum + 1);
+}
+function prevPage() {
+  if (pageNum > 1) renderPage(pageNum - 1);
 }
 
 window.addEventListener("DOMContentLoaded", () => {
